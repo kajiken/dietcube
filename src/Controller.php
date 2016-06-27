@@ -25,7 +25,7 @@ class Controller
     public function setVars($key, $value = null)
     {
         if (is_array($key)) {
-            $this->view_vars = array_merge($view_vars, $key);
+            $this->view_vars = array_merge($this->view_vars, $key);
         } else {
             $this->view_vars[$key] = $value;
         }
@@ -76,7 +76,10 @@ class Controller
 
     protected function redirect($uri, $code = 302)
     {
-        $this->getResponse()->setHeader('Location', $uri, $code);
+        $response = $this->getResponse();
+
+        $response->setStatusCode($code);
+        $response->setHeader('Location', $uri);
 
         return null;
     }

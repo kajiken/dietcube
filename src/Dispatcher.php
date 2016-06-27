@@ -14,7 +14,6 @@ use Dietcube\Events\FinishRequestEvent;
 use Dietcube\Exception\DCException;
 use Dietcube\Exception\HttpNotFoundException;
 use Dietcube\Exception\HttpMethodNotAllowedException;
-use Dietcube\Exception\HttpErrorException;
 use Dietcube\Twig\DietcubeExtension;
 use Pimple\Container;
 use FastRoute\Dispatcher as RouteDispatcher;
@@ -145,9 +144,10 @@ class Dispatcher
     /**
      * @return Response
      */
-    protected function prepareReponse()
+    protected function prepareResponse()
     {
         $response = new Response();
+        $response->setLogger($this->container['logger']);
         $this->container['response'] = $response;
 
         return $response;
@@ -159,11 +159,9 @@ class Dispatcher
     public function handleRequest()
     {
         $container = $this->container;
-        $logger = $container['logger'];
-        $debug = $container['app.config']->get('debug');
 
         // prepare handle request
-        $response = $this->prepareReponse();
+        $response = $this->prepareResponse();
 
         $method = $container['global.server']->get('REQUEST_METHOD');
         $path = $container['app']->getPath();
@@ -185,14 +183,14 @@ class Dispatcher
     }
 
     /**
-     * @params \Exception $errors
+     * @param \Exception $errors
      * @return Response
      */
     public function handleError(\Exception $errors)
     {
         $logger = $this->container['logger'];
         if (!isset($this->container['response'])) {
-            $response = $this->prepareReponse();
+            $response = $this->prepareResponse();
         } else {
             $response = $this->container['response'];
         }
@@ -231,6 +229,9 @@ class Dispatcher
         } else {
             list($controller_name, $action_name) = $this->app->getControllerByHandler($handler);
 
+            if (!class_exists($controller_name)) {
+                throw new DCException("Controller {$controller_name} is not exists.");
+            }
             $controller = $this->app->createController($controller_name);
             $executable = [$controller, $action_name];
         }
@@ -258,7 +259,7 @@ class Dispatcher
             }
         }
 
-        $logger->debug('Exceute action.', ['controller' => $controller_name, 'action' => $action_name, 'vars' => $vars]);
+        $logger->debug('Execute action.', ['controller' => $controller_name, 'action' => $action_name, 'vars' => $vars]);
         return call_user_func_array($executable, $vars);
     }
 
@@ -271,7 +272,11 @@ class Dispatcher
     }
 
     /**
-     * Dispatche router with HTTP request information.
+     * Dispatch router with HTTP request information.
+     *
+     * @param $method
+     * @param $path
+     * @return array
      */
     protected function dispatchRouter($method, $path)
     {
@@ -314,7 +319,7 @@ class Dispatcher
             return [$error_controller, Controller::ACTION_METHOD_NOT_ALLOWED];
         }
 
-        // Do internalError acition for any errors.
+        // Do internalError action for any errors.
         return [$error_controller, Controller::ACTION_INTERNAL_ERROR];
     }
 
@@ -370,7 +375,7 @@ class Dispatcher
         try {
             $response = $dispatcher->handleRequest();
         } catch (\Exception $e) {
-            // Please handle errors occured on executing Dispatcher::handleError with your web server.
+            // Please handle errors occurred on executing Dispatcher::handleError with your web server.
             // Dietcube doesn't care these errors.
             $response = $dispatcher->handleError($e);
         }

@@ -27,11 +27,19 @@ Use Dietcube on your project.
 composer require dietcube/dietcube
 ```
 
-Start project with the skeleton (WIP):
+Start project with the skeleton:
 
 ```
-composer create-project dietcube/dietcube-project
+composer create-project dietcube/project -s dev your-project
 ```
+
+Contribution
+---------
+
+Please read the CLA below carefully before submitting your contribution.
+
+https://www.mercari.com/cla/
+
 
 License
 ---------
